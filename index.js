@@ -61,10 +61,37 @@ async function run() {
         else res.send({...result, assignments: assignmentResult});
     });
 
+    app.get("/room/:roomid/:assignmentid", async (req, res) => {
+        const query = {_id: new ObjectId(req.params.assignmentid)};
+        const result = await assignmentCollection.findOne(query);
+        // console.log(result);
+        // const assignmentQuery = {roomId: req.params.roomid};
+
+        // const assignmentCursor = await assignmentCollection.find(assignmentQuery);
+        // const assignmentResult = await assignmentCursor.toArray();
+        // console.log(assignmentResult);
+        if(result === null) res.send({}); 
+        else res.send(result);
+    });
+
     app.post("/createassignment", async (req, res) => {
         const assignment = req.body;
         const result = await assignmentCollection.insertOne(assignment);
         res.send(result);
+    });
+
+    app.put("/editassignment", async (req, res) => {
+      const {title, description, _id} = req.body;
+      const filter = {_id: new ObjectId(_id)};
+      const updatedAssignment = {$set: {title, description}};
+      const result = await assignmentCollection.updateOne(filter, updatedAssignment);
+      res.send(result);
+    });
+
+    app.delete("/deleteassignment/:id", async (req, res) => {
+      const filter = {_id: new ObjectId(req.params.id)};
+      const result = await assignmentCollection.deleteOne(filter);
+      res.send(result);
     });
 
     app.post("/adduser", async (req, res) => {
