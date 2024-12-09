@@ -28,6 +28,7 @@ async function run() {
     const userCollection = database.collection("users");
     const roomCollection = database.collection("rooms");
     const assignmentCollection = database.collection("assignments");
+    const submissionCollection = database.collection("submissions");
 
     app.get("/user/:email", async (req, res) => {
         const query = {email: req.params.email};
@@ -89,6 +90,9 @@ async function run() {
     });
 
     app.delete("/deleteassignment/:id", async (req, res) => {
+      const filterSubs = {assignmentId: req.params.id};
+      const subResult = await submissionCollection.deleteMany(filterSubs);
+      console.log(subResult);
       const filter = {_id: new ObjectId(req.params.id)};
       const result = await assignmentCollection.deleteOne(filter);
       res.send(result);
@@ -104,6 +108,37 @@ async function run() {
         const room = req.body;
         const result = await roomCollection.insertOne(room);
         res.send(result);
+    });
+
+    app.put("/editroom", async (req, res) => {
+      const {roomName, description, _id} = req.body;
+      const filter = {_id: new ObjectId(_id)};
+      const updatedRoom = {$set: {roomName, description}};
+      const result = await roomCollection.updateOne(filter, updatedRoom);
+      res.send(result);
+    });
+
+    app.delete("/deleteroom/:id", async (req, res) => {
+      // find assignment ids under the room
+      const assignmentQuery = {roomId: req.params.id};
+      const assignmentCursor = await assignmentCollection.find(assignmentQuery);
+      const assignmentResult = await assignmentCursor.toArray();
+
+      const assignmentIds = assignmentResult.map(item => (item._id.toString()));
+      const assignmentObjectIds = assignmentResult.map(item => item._id);
+      // console.log("Assignment Ids: ", assignmentIds);
+      // delete all submissions of all assignments of the room
+      const subResult = await submissionCollection.deleteMany({"assignmentId" : {"$in": assignmentIds}});
+      console.log(subResult);
+
+      // delete all assignments of the room
+      const assignmentDel = await assignmentCollection.deleteMany({"_id": {"$in": assignmentObjectIds}});
+      console.log(assignmentDel);
+
+      // delete the room
+      const result = await roomCollection.deleteOne({"_id": new ObjectId(req.params.id)});
+
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
