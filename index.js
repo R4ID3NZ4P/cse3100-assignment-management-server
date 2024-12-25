@@ -114,6 +114,12 @@ async function run() {
         res.send(result);
     });
 
+    app.post("/submission", async (req, res) => {
+        const submission = req.body;
+        const result = await submissionCollection.insertOne(submission);
+        res.send(result);
+    });
+
     app.post("/joinroom", async (req, res) => {
       const room = req.body;
       // console.log(room);
