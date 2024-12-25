@@ -45,8 +45,12 @@ async function run() {
         const result = await roomCollection.find(query);
         const resArray = await result.toArray();
         // console.log(resArray);
-        if(result === null) res.send({}); 
-        else res.send(resArray);
+        if(resArray.length) res.send(resArray);
+        else {
+          const memberRes = await roomCollection.find({members: req.params.email});
+          const memberArray = await memberRes.toArray();
+          res.send(memberArray);
+        } 
     });
 
     app.get("/room/:roomid", async (req, res) => {
@@ -108,6 +112,22 @@ async function run() {
         const room = req.body;
         const result = await roomCollection.insertOne(room);
         res.send(result);
+    });
+
+    app.post("/joinroom", async (req, res) => {
+      const room = req.body;
+      // console.log(room);
+      // const result = await roomCollection.insertOne(room);
+      const dbRoom = await roomCollection.findOne({_id: new ObjectId(room.roomCode)});
+      console.log(dbRoom);
+      if(!dbRoom) res.send({status: 404})
+      else {
+        const updatedRoom = await roomCollection.updateOne({_id: new ObjectId(room.roomCode)},
+        {$push: {members: room.user}}
+      );
+        // console.log(updatedRoom);
+        if(updatedRoom.modifiedCount) res.send({status: 200});
+      }
     });
 
     app.put("/editroom", async (req, res) => {
