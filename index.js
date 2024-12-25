@@ -32,7 +32,6 @@ async function run() {
 
     app.get("/user/:email", async (req, res) => {
         const query = {email: req.params.email};
-        // console.log(query);
         const result = await userCollection.findOne(query);
         console.log(result);
         if(result === null) res.send({}); 
@@ -41,10 +40,8 @@ async function run() {
 
     app.get("/user/:email/rooms", async (req, res) => {
         const query = {owner: req.params.email};
-        // console.log(query);
         const result = await roomCollection.find(query);
         const resArray = await result.toArray();
-        // console.log(resArray);
         if(resArray.length) res.send(resArray);
         else {
           const memberRes = await roomCollection.find({members: req.params.email});
@@ -56,7 +53,6 @@ async function run() {
     app.get("/room/:roomid", async (req, res) => {
         const query = {_id: new ObjectId(req.params.roomid)};
         const result = await roomCollection.findOne(query);
-        // console.log(result);
         const assignmentQuery = {roomId: req.params.roomid};
 
         const assignmentCursor = await assignmentCollection.find(assignmentQuery);
@@ -69,12 +65,6 @@ async function run() {
     app.get("/room/:roomid/:assignmentid", async (req, res) => {
         const query = {_id: new ObjectId(req.params.assignmentid)};
         const result = await assignmentCollection.findOne(query);
-        // console.log(result);
-        // const assignmentQuery = {roomId: req.params.roomid};
-
-        // const assignmentCursor = await assignmentCollection.find(assignmentQuery);
-        // const assignmentResult = await assignmentCursor.toArray();
-        // console.log(assignmentResult);
         if(result === null) res.send({}); 
         else res.send(result);
     });
@@ -114,16 +104,40 @@ async function run() {
         res.send(result);
     });
 
+    app.get("/submission/:assignmentid", async (req, res) => {
+        const query = {
+          assignmentId: req.params.assignmentid
+        };
+        const result = await submissionCollection.find(query);
+        const resArray = await result.toArray();
+        res.send(resArray);
+    });
+
+    app.get("/submission/:assignmentid/:email", async (req, res) => {
+        const query = {
+          assignmentId: req.params.assignmentid,
+          submittedBy: req.params.email
+        };
+        const result = await submissionCollection.findOne(query);
+        res.send(result);
+    });
+
     app.post("/submission", async (req, res) => {
         const submission = req.body;
         const result = await submissionCollection.insertOne(submission);
         res.send(result);
     });
 
+    app.put("/submission/:submissionid", async (req, res) => {
+      const {grade} = req.body;
+      const filter = {_id: new ObjectId(req.params.submissionid)};
+      const updatedSubmission = {$set: {grade}};
+      const result = await submissionCollection.updateOne(filter, updatedSubmission);
+      res.send(result);
+    });
+
     app.post("/joinroom", async (req, res) => {
       const room = req.body;
-      // console.log(room);
-      // const result = await roomCollection.insertOne(room);
       const dbRoom = await roomCollection.findOne({_id: new ObjectId(room.roomCode)});
       console.log(dbRoom);
       if(!dbRoom) res.send({status: 404})
@@ -131,7 +145,6 @@ async function run() {
         const updatedRoom = await roomCollection.updateOne({_id: new ObjectId(room.roomCode)},
         {$push: {members: room.user}}
       );
-        // console.log(updatedRoom);
         if(updatedRoom.modifiedCount) res.send({status: 200});
       }
     });
@@ -145,14 +158,12 @@ async function run() {
     });
 
     app.delete("/deleteroom/:id", async (req, res) => {
-      // find assignment ids under the room
       const assignmentQuery = {roomId: req.params.id};
       const assignmentCursor = await assignmentCollection.find(assignmentQuery);
       const assignmentResult = await assignmentCursor.toArray();
 
       const assignmentIds = assignmentResult.map(item => (item._id.toString()));
       const assignmentObjectIds = assignmentResult.map(item => item._id);
-      // console.log("Assignment Ids: ", assignmentIds);
       // delete all submissions of all assignments of the room
       const subResult = await submissionCollection.deleteMany({"assignmentId" : {"$in": assignmentIds}});
       console.log(subResult);
@@ -184,69 +195,3 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port: ${port}`);
 });
-
-// app.get("/brands/:brand", async (req, res) => {
-//     const query = {brand: req.params.brand};
-//     const cursor = productCollection.find(query);
-//     const result = await cursor.toArray();
-//     res.send(result);
-// });
-
-// app.get("/brands/:brand/:_id", async (req, res) => {
-//   const query = {_id: new ObjectId(req.params._id)};
-//   const result = await productCollection.findOne(query);;
-//   res.send(result);
-// });
-
-// app.get("/cart/:user", async (req, res) => {
-//     const query = {user: req.params.user};
-//     console.log(query);
-//     const result = await userCollection.findOne(query);
-//     console.log(result);
-//     if(result === null) res.send({}); 
-//     else res.send(result);
-// });
-
-// app.get("/cartitem/:_id", async (req, res) => {
-//   const query = {_id: new ObjectId(req.params._id)};
-//   const result = await productCollection.findOne(query);;
-//   res.send(result);
-// });
-
-// app.put("/brands/:brand/:_id/update", async (req, res) => {
-//   const filter = {_id: new ObjectId(req.params._id)};
-//   const options = {upsert: true};
-//   const {
-//     name,
-//     image,
-//     brand,
-//     type,
-//     price,
-//     description,
-//     rating
-//   } = req.body;
-
-//   const updatedProduct = {
-//     $set: {
-//       name,
-//       image,
-//       brand,
-//       type,
-//       price,
-//       description,
-//       rating
-//     }
-//   };
-//   const result = await productCollection.updateOne(filter, updatedProduct, options);
-//   console.log(result);
-//   res.send(result);
-// });
-
-// app.put("/addtocart", async (req, res) => {
-//   const {user, items} = req.body;
-//   const filter = {user};
-//   const options = {upsert: true};
-//   const updatedCart = {$set: {user, items}};
-//   const result = await userCollection.updateOne(filter, updatedCart, options);
-//   res.send(result);
-// })
